@@ -1,7 +1,8 @@
-import timeit
+import os
 from generator import *
 import time
 import psutil
+import sys
 
 alpha = {'A': {'A': 0, 'C': 110, 'G': 48, 'T': 94},
          'C': {'A': 110, 'C': 0, 'G': 118, 'T': 48},
@@ -34,15 +35,13 @@ def naive_solver(X: str, Y: str):
             ignore_j = dp[i][j - 1] + delta
             dp[i][j] = min(match_i_j, ignore_i, ignore_j)
 
-    # construct the final matching from dp table
     X_result = ''
     Y_result = ''
     i = m
     j = n
 
     while i != 0 or j != 0:
-        # if we reach the end of one matching
-        # we will blindly match the rest of other string
+
         if i == 0:
             X_result += '_'
             Y_result += Y[j - 1]
@@ -73,8 +72,6 @@ def naive_solver(X: str, Y: str):
             Y_result += Y[j - 1]
             j -= 1
 
-    # since we are going backward
-    # we should reverse the result string in the end
     X_result = X_result[::-1]
     Y_result = Y_result[::-1]
 
@@ -89,30 +86,14 @@ def process_memory():
 
 
 if __name__ == '__main__':
-    X, Y = generator()
-    start_time = time.time()
-    A, B = naive_solver(X, Y)
-    end_time = time.time()
-    time_taken = (end_time - start_time)*1000
-    memory_consumed = process_memory()
-    data = open("output.txt", 'w+')
-    print((A, B), file=data)
-    print(f"\nruntime of naive solution is      :{time_taken}", file=data)
-    print(f"\nMemory usage of naive solution is     :{memory_consumed / 10 ** 6} MB", file=data)
-    data.close()
-
-    with open('cpu_time.txt', 'a') as f:
-        f.write(str(time_taken) + "\n")
-        f.write(str(max(len(X), len(Y))) + "\n")
-
-    with open('memory_usage.txt', 'a') as f:
-        f.write(str(memory_consumed / 10 ** 6) + "\n")
-        f.write(str(max(len(X), len(Y))) + "\n")
-
-
-
-
-
-
-
-
+        X, Y = generator(sys.argv[1])
+        start_time = time.time()
+        A, B = naive_solver(X, Y)
+        end_time = time.time()
+        time_taken = (end_time - start_time)*1000
+        memory_consumed = process_memory()
+        data = open(sys.argv[2], 'w+')
+        print((A, B), file=data)
+        print(f"\nruntime of naive solution is      :{time_taken}", file=data)
+        print(f"\nMemory usage of naive solution is     :{memory_consumed / 1000} KB", file=data)
+        data.close()
