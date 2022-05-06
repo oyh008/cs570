@@ -1,4 +1,4 @@
-import timeit
+import sys
 from generator import *
 import time
 import psutil
@@ -15,7 +15,6 @@ def optimized_solver(X: str, Y: str):
     m = len(X)
     n = len(Y)
 
-    # base case
     if m == 0 and n == 0:
         return "", ""
 
@@ -47,12 +46,9 @@ def optimized_solver(X: str, Y: str):
 
                 return (longer, ''.join(shorter_res)) if m > n else (''.join(shorter_res), longer)
 
-                # memory efficient
-    # compress 2d dp table into 1d
     dp_left = [i * delta for i in range(n + 1)]
     dp_right = [i * delta for i in range(n + 1)]
 
-    # left half of X
     for i in range(1, m // 2 + 1):
         prev = dp_left[0]
         dp_left[0] = i * delta
@@ -104,35 +100,14 @@ def process_memory():
     return memory_consumed
 
 if __name__ == '__main__':
-    X, Y = generator()
-    start_time = time.time()
-    A, B = optimized_solver(X, Y)
-    end_time = time.time()
-    time_taken = (end_time - start_time)*1000
-    memory_consumed = process_memory()
-    data = open("output.txt", 'w+')
-    print((A, B), file=data)
-    print(f"\nruntime of naive solution is      :{time_taken}", file=data)
-    print(f"\nMemory usage of naive solution is     :{memory_consumed / 10 ** 6} MB", file=data)
-    data.close()
-
-    with open('cpu_time.txt', 'a') as f:
-        f.write(str(time_taken) + "\n")
-        f.write(str(max(len(X), len(Y))) + "\n")
-
-    with open('memory_usage.txt', 'a') as f:
-        f.write(str(memory_consumed / 10 ** 6) + "\n")
-        f.write(str(max(len(X), len(Y))) + "\n")
-
-
-
-
-
-
-
-
-
-
-
-
-
+        X, Y = generator(sys.argv[1])
+        start_time = time.time()
+        A, B = optimized_solver(X, Y)
+        end_time = time.time()
+        time_taken = (end_time - start_time)*1000
+        memory_consumed = process_memory()
+        data = open("output.txt", 'w+')
+        print((A, B), file=data)
+        print(f"\nruntime of opt solution is      :{time_taken}", file=data)
+        print(f"\nMemory usage of opt solution is     :{memory_consumed / 1000} KB", file=data)
+        data.close()
