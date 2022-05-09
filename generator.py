@@ -1,5 +1,8 @@
-def generator():
-    with open("input.txt") as f:
+import sys
+
+
+def generator(input):
+    with open(input) as f:
         data = f.readlines()
         for i in range(len(data)):
             data[i] = data[i].strip('\n')
@@ -24,5 +27,5 @@ def generator():
 
 
 if __name__ == '__main__':
-    X, Y = generator()
+    X, Y = generator(sys.argv[1])
     print(X, Y)

@@ -1,113 +1,53 @@
-import sys
-from generator import *
-import time
-import psutil
-
-alpha = {'A': {'A': 0, 'C': 110, 'G': 48, 'T': 94},
-         'C': {'A': 110, 'C': 0, 'G': 118, 'T': 48},
-         'G': {'A': 48, 'C': 118, 'G': 0, 'T': 110},
-         'T': {'A': 94, 'C': 48, 'G': 110, 'T': 0}}
-
-delta = 30
+from common import dc, alpha, gap_penalty
+from basic_3 import basic
 
 
-def optimized_solver(X: str, Y: str):
-    m = len(X)
-    n = len(Y)
-
-    if m == 0 and n == 0:
-        return "", ""
-
-    if n <= 1 or m <= 1:
-        if m == 0:
-            return "_" * n, Y
-        elif n == 0:
-            return X, "_" * m
-        else:
-            shorter = X if m == 1 else Y
-            longer = X if m != 1 else Y
-
-            idx = max(m, n) - 1
-            cur_min = 2 * delta
-            result = -1
-
-            for idx in range(max(m, n) - 1, -1, -1):
-                if alpha[longer[idx]][shorter[0]] < cur_min:
-                    result = idx
-                    cur_min = alpha[longer[idx]][shorter[0]]
-                    if cur_min == 0:
-                        break
-
-            if result < 0:
-                return "_" * n + X, Y + "_" * m
-            else:
-                shorter_res = ["_"] * max(m, n)
-                shorter_res[result] = shorter[0]
-
-                return (longer, ''.join(shorter_res)) if m > n else (''.join(shorter_res), longer)
-
-    dp_left = [i * delta for i in range(n + 1)]
-    dp_right = [i * delta for i in range(n + 1)]
-
-    for i in range(1, m // 2 + 1):
-        prev = dp_left[0]
-        dp_left[0] = i * delta
+def prefix(x, y):
+    m = len(x)
+    n = len(y)
+    a = [0 for _ in range(n + 1)]
+    for j in range(n + 1):
+        a[j] = j * gap_penalty
+    for i in range(1, m + 1):
+        prev = a[0]
+        a[0] = i * gap_penalty
         for j in range(1, n + 1):
-            cur = dp_left[j]
+            temp = a[j]
+            mismatch = prev + alpha[x[i - 1]][y[j - 1]]
+            x_gap = a[j] + gap_penalty
+            y_gap = a[j - 1] + gap_penalty
+            a[j] = min(mismatch, x_gap, y_gap)
+            prev = temp
+    return a
 
-            match_i_j = prev + alpha[X[i - 1]][Y[j - 1]]
-            ignore_i = dp_left[j] + delta
-            ignore_j = dp_left[j - 1] + delta
-            dp_left[j] = min(match_i_j, ignore_i, ignore_j)
 
-            prev = cur
+def suffix(x, y):
+    return prefix(x[::-1], y[::-1])[::-1]
 
-    # right half of X
-    for i in range(m, m // 2, -1):
-        prev = dp_right[0]
-        dp_right[0] = (m + 1 - i) * delta
-        for j in range(n, 0, -1):
-            cur = dp_right[n + 1 - j]
 
-            match_i_j = prev + alpha[X[i - 1]][Y[j - 1]]
-            ignore_i = dp_right[n + 1 - j] + delta
-            ignore_j = dp_right[n + 1 - j - 1] + delta
-            dp_right[n + 1 - j] = min(match_i_j, ignore_i, ignore_j)
+def efficient(x, y, x_start, x_end, y_start, y_end):
+    if x_end - x_start <= 2 or y_end - y_start <= 2:
+        cost, align_x, align_y = basic(x[x_start:x_end], y[y_start:y_end])
+        return cost, align_x, align_y
+    else:
+        i = (x_start + x_end) // 2
+        prefix_cost = prefix(x[x_start:i], y[y_start:y_end])
+        suffix_cost = suffix(x[i:x_end], y[y_start:y_end])
+        pos = 0
+        min_cost = prefix_cost[0] + suffix_cost[0]
+        for j in range(len(prefix_cost)):
+            cost = prefix_cost[j] + suffix_cost[j]
+            if cost < min_cost:
+                min_cost = cost
+                pos = j
+        pos += y_start
+        pre_cost, pre_align_x, pre_align_y = efficient(x, y, x_start, i, y_start, pos)
+        suf_cost, suf_align_x, suf_align_y = efficient(x, y, i, x_end, pos, y_end)
+        cost = pre_cost + suf_cost
+        align_x = pre_align_x + suf_align_x
+        align_y = pre_align_y + suf_align_y
+        return cost, align_x, align_y
 
-            prev = cur
-
-    # check the optimized split point
-    left = right = -1
-    min_cost = float('inf')
-
-    for i in range(0, n + 1):
-        if dp_left[i] + dp_right[n - i] <= min_cost:
-            left = i
-            right = n - i
-            min_cost = dp_left[i] + dp_right[n - i]
-
-    # divide
-    left_x, left_y = optimized_solver(X[:m // 2], Y[: left])
-    right_x, right_y = optimized_solver(X[m // 2:], Y[left:])
-
-    # conquer
-    return left_x + right_x, left_y + right_y
-
-def process_memory():
-    process = psutil.Process()
-    memory_info = process.memory_info()
-    memory_consumed = int(memory_info.rss/1024)
-    return memory_consumed
 
 if __name__ == '__main__':
-        X, Y = generator(sys.argv[1])
-        start_time = time.time()
-        A, B = optimized_solver(X, Y)
-        end_time = time.time()
-        time_taken = (end_time - start_time)*1000
-        memory_consumed = process_memory()
-        data = open("output.txt", 'w+')
-        print((A, B), file=data)
-        print(f"\nruntime of opt solution is      :{time_taken}", file=data)
-        print(f"\nMemory usage of opt solution is     :{memory_consumed / 1000} KB", file=data)
-        data.close()
+    dc(efficient)
