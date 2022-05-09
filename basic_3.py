@@ -1,4 +1,14 @@
-from common import dp, alpha, gap_penalty
+import sys
+from resource import *
+import time
+import psutil
+
+alpha = {'A': {'A': 0, 'C': 110, 'G': 48, 'T': 94},
+         'C': {'A': 110, 'C': 0, 'G': 118, 'T': 48},
+         'G': {'A': 48, 'C': 118, 'G': 0, 'T': 110},
+         'T': {'A': 94, 'C': 48, 'G': 110, 'T': 0}}
+
+gap_penalty = 30
 
 
 def basic(x, y):
@@ -52,5 +62,59 @@ def basic(x, y):
     return dp[-1][-1], x_gen[::-1], y_gen[::-1]
 
 
+def generate_str(path):
+    with open(path) as file:
+        # create string 1
+        basestr1 = file.readline().strip("\n")
+        str1 = basestr1
+        index = file.readline().strip("\n")
+        i = 0
+        while index.isnumeric():
+            i += 1
+            index = int(index)
+            str1 = str1[:index + 1] + str1 + str1[index + 1:]
+            index = file.readline().strip("\n")
+        # create string 2
+        basestr2 = index
+        str2 = basestr2
+        index = file.readline().strip("\n")
+        j = 0
+        while index.isnumeric():
+            j += 1
+            index = int(index)
+            str2 = str2[:index + 1] + str2 + str2[index + 1:]
+            index = file.readline().strip("\n")
+        # validate the length of the strings
+        assert len(str1) == (2 ** i) * len(basestr1)
+        assert len(str2) == (2 ** j) * len(basestr2)
+        return str1, str2
+
+
+def write_output(cost, align1, align2, time, memory):
+    # write to output
+    output = sys.argv[2]
+    with open(output, "w") as file:
+        file.write(str(cost) + "\n")
+        file.write(align1 + "\n")
+        file.write(align2 + "\n")
+        file.write(str(time) + "\n")
+        file.write(str(memory) + "\n")
+        file.close()
+
+
+def process_memory():
+    process = psutil.Process()
+    memory_info = process.memory_info()
+    memory_consumed = int(memory_info.rss/1024)
+    return memory_consumed
+
+
 if __name__ == '__main__':
-    dp(basic)
+    input = sys.argv[1]
+    start_time = time.time()
+    str1, str2 = generate_str(input)
+    cost, align1, align2 = basic(str1, str2)
+    end_time = time.time()
+    time_taken = (end_time - start_time) * 1000
+    memory_consumed = process_memory()
+    write_output(cost, align1, align2, time_taken, memory_consumed)
